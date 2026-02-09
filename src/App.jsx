@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { MeshTransmissionMaterial, Sparkles, Environment, Float, useScroll } from "@react-three/drei";
 import { motion, useScroll as useFramerScroll, useTransform } from "framer-motion";
@@ -15,6 +15,7 @@ function ReactiveLiquidKnot({ entered, setEntered }) {
   const { camera, mouse, viewport } = useThree();
   const lastMouse = useRef({ x: 0, y: 0 });
   const velocity = useRef(0);
+  // Destino da câmera ajustado para não cortar o texto
   const targetPos = useMemo(() => new THREE.Vector3(0, 0, entered ? -5 : 6), [entered]);
 
   useFrame((state, delta) => {
@@ -44,10 +45,11 @@ function ReactiveLiquidKnot({ entered, setEntered }) {
       knotRef.current.rotation.y += delta * 0.05;
     }
 
-    camera.position.lerp(targetPos, 0.05);
+    // Câmera viaja mais rápido (0.08) para acompanhar a entrada do texto
+    camera.position.lerp(targetPos, 0.08);
     const lookAtTarget = entered ? new THREE.Vector3(0, -2, -10) : new THREE.Vector3(0, 0, 0);
     const currentLookAt = new THREE.Vector3(0, 0, -2);
-    currentLookAt.lerp(lookAtTarget, 0.05);
+    currentLookAt.lerp(lookAtTarget, 0.08);
     camera.lookAt(currentLookAt);
   });
 
@@ -93,7 +95,7 @@ function RevealOnScroll({ children, delay = 0 }) {
   );
 }
 
-// --- SUB-COMPONENTES UI ---
+// --- UI COMPONENTS ---
 function StatsBar() {
   return (
     <RevealOnScroll>
@@ -199,7 +201,6 @@ export default function App() {
   const [entered, setEntered] = useState(false);
   const { scrollYProgress } = useFramerScroll();
   
-  // Controle de scroll APENAS para SAÍDA do Hero (ele desaparece ao rolar pra baixo)
   const opacityHero = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const yHero = useTransform(scrollYProgress, [0, 0.2], [0, -50]);
   
@@ -207,7 +208,10 @@ export default function App() {
   const PAYMENT_LINK = "https://payment-link-v3.stone.com.br/pl_zoZrQw9PM6g3Ag2H4sryNejKGJ0WxpXd";
 
   const handleEnter = () => {
+    // 1. Ativa o estado
     setEntered(true);
+    // 2. Garante que estamos no topo da página
+    window.scrollTo(0, 0);
   };
 
   return (
@@ -228,40 +232,42 @@ export default function App() {
       {/* UI LAYER */}
       <div className={`relative z-10 transition-all duration-1000 ${entered ? "overflow-y-auto h-screen" : "overflow-hidden h-screen"}`}>
         
-        {/* TELA DE CAPA (BOTÃO) */}
-        {!entered && (
-          <div className="absolute inset-0 flex flex-col items-center justify-end pb-32 pointer-events-none px-4">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center pointer-events-auto z-50">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-red-500/10 border border-red-500/30 px-4 py-1.5 backdrop-blur-md">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-red-100">Disponível Agora</span>
-              </div>
-              <h1 className="text-6xl md:text-9xl font-bold tracking-tighter mb-2 text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]">UI Z</h1>
-              <p className="text-zinc-300 mb-8 tracking-[0.3em] text-xs md:text-sm uppercase font-semibold drop-shadow-md">Seu Site Profissional por Assinatura</p>
-              <button onClick={handleEnter} className="group relative px-10 py-4 bg-white text-black rounded-full text-sm font-bold tracking-[0.2em] uppercase transition-all hover:bg-red-600 hover:text-white hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.2)] cursor-pointer">
-                Clique e Descubra
-              </button>
-            </motion.div>
-          </div>
-        )}
+        {/* TELA 1: CAPA (BOTÃO) */}
+        {/* Usando AnimatePresence para garantir que o botão saia suavemente */}
+        <div className={`absolute inset-0 flex flex-col items-center justify-end pb-32 px-4 transition-opacity duration-500 ${entered ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+            {!entered && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center pointer-events-auto z-50">
+                <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-red-500/10 border border-red-500/30 px-4 py-1.5 backdrop-blur-md">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-red-100">Disponível Agora</span>
+                </div>
+                <h1 className="text-6xl md:text-9xl font-bold tracking-tighter mb-2 text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]">UI Z</h1>
+                <p className="text-zinc-300 mb-8 tracking-[0.3em] text-xs md:text-sm uppercase font-semibold drop-shadow-md">Seu Site Profissional por Assinatura</p>
+                <button onClick={handleEnter} className="group relative px-10 py-4 bg-white text-black rounded-full text-sm font-bold tracking-[0.2em] uppercase transition-all hover:bg-red-600 hover:text-white hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.2)] cursor-pointer">
+                  Clique e Descubra
+                </button>
+              </motion.div>
+            )}
+        </div>
 
-        {/* CONTEÚDO SCROLLÁVEL */}
+        {/* TELA 2: CONTEÚDO SCROLLÁVEL */}
+        {/* Só renderiza o container se entered for true */}
         {entered && (
           <div className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-24 relative">
             
-            {/* HERO PRINCIPAL (APARECE SOZINHO LOGO APÓS O CLIQUE) */}
-            {/* A animação 'animate' faz ele aparecer suavemente após 1.2s (tempo da viagem da câmera) */}
+            {/* HERO PRINCIPAL (APARECE IMEDIATAMENTE - DELAY 0.1s) */}
             <motion.div 
-              style={{ opacity: opacityHero, y: yHero }} // Mantém o fade-out ao rolar
+              style={{ opacity: opacityHero, y: yHero }} 
               className="min-h-[85vh] flex flex-col justify-center items-center text-center pt-32 pb-20 relative"
             >
               <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.2, duration: 0.8, ease: "easeOut" }} // <--- AQUI ESTÁ O SEGREDO
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                // CORREÇÃO CRÍTICA: Delay de apenas 0.2s para ser instantâneo
+                transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }} 
               >
                 <h2 className="text-4xl md:text-8xl font-bold tracking-tighter mb-8 leading-[0.9]">
                   O Fim dos Sites de <br />
@@ -277,7 +283,7 @@ export default function App() {
               </motion.div>
             </motion.div>
 
-            {/* O RESTO DO SITE SEGUE ABAIXO... */}
+            {/* O RESTO DO SITE */}
             <StatsBar />
 
             {/* COMPARATIVO */}
