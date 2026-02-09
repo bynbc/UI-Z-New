@@ -25,7 +25,8 @@ function ReactiveLiquidKnot({ entered, setEntered, isMobile }) {
   const lastMouse = useRef({ x: 0, y: 0 });
   const velocity = useRef(0);
   
-  const targetPos = useMemo(() => new THREE.Vector3(0, entered ? 0.8 : 0, entered ? (isMobile ? -9 : -5) : 6), [entered, isMobile]);
+  // Posição ajustada: O objeto fica mais centralizado/fundo para não atrapalhar a barra no topo
+  const targetPos = useMemo(() => new THREE.Vector3(0, entered ? 0 : 0, entered ? (isMobile ? -9 : -5) : 6), [entered, isMobile]);
 
   useFrame((state, delta) => {
     if (!knotRef.current) return;
@@ -120,27 +121,27 @@ function RevealOnScroll({ children, delay = 0 }) {
   );
 }
 
-// --- SUB-COMPONENTES UI ---
+// --- SUB-COMPONENTES UI (DADOS REAIS E HONESTOS) ---
 function StatsBar({ delay = 0 }) {
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20 }} // Entra vindo de baixo agora
+      initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: delay, duration: 0.5 }}
-      // Bordas: tirei o border-b e pus border-t e border-b para ficar como um "rodapé" dessa seção
-      className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 py-6 md:py-8 border-y border-white/10 bg-black/40 backdrop-blur-md rounded-2xl w-full"
+      // Ordem alterada: Isso vai ficar no topo agora
+      className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 py-6 md:py-8 border-b border-white/10 bg-black/40 backdrop-blur-md rounded-2xl mb-12 w-full"
     >
-      <StatItem number="+500" label="Projetos Entregues" />
-      <StatItem number="99%" label="Satisfação" />
-      <StatItem number="24h" label="Suporte Médio" />
-      <StatItem number="Zero" label="Custo Surpresa" />
+      <StatItem number="Online" label="24 Horas" />
+      <StatItem number="Suporte" label="Humanizado" />
+      <StatItem number="Entrega" label="Imediata" />
+      <StatItem number="Sem" label="Fidelidade" />
     </motion.div>
   );
 }
 function StatItem({ number, label }) {
   return (
     <div className="text-center">
-      <div className="text-2xl md:text-3xl font-bold text-white mb-1">{number}</div>
+      <div className="text-xl md:text-3xl font-bold text-white mb-1">{number}</div>
       <div className="text-[10px] md:text-xs uppercase tracking-widest text-zinc-500">{label}</div>
     </div>
   );
@@ -281,15 +282,18 @@ export default function App() {
         {entered && (
           <div className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-24 relative pt-12 md:pt-20">
             
-            {/* HERO SECTION - INVERTIDA E COMPACTA */}
+            {/* HERO SECTION COMPACTO */}
             <div className="flex flex-col items-center text-center relative z-20 min-h-[500px]">
               
-              {/* 1. TEXTO E OFERTA (AGORA VEM PRIMEIRO) */}
+              {/* 1. STATS BAR (NO TOPO AGORA) */}
+              <StatsBar delay={0.2} />
+
+              {/* 2. TEXTO E OFERTA (EM BAIXO AGORA) */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.8 }}
-                className="mb-12 w-full"
+                transition={{ delay: 0.4, duration: 0.8 }}
+                className="mb-16 w-full"
               >
                 <h2 className="text-3xl md:text-8xl font-bold tracking-tighter mb-6 leading-tight">
                   O Fim dos Sites de <br />
@@ -303,9 +307,6 @@ export default function App() {
                    <a href={WHATSAPP_LINK} target="_blank" className="bg-white/10 text-white px-8 py-4 rounded-full font-bold hover:bg-white/20 transition-colors cursor-pointer border border-white/5">Falar com Consultor</a>
                 </div>
               </motion.div>
-
-              {/* 2. STATS BAR (AGORA VEM DEPOIS) */}
-              <StatsBar delay={0.4} />
 
             </div>
 
