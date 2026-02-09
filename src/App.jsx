@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { MeshTransmissionMaterial, Sparkles, Environment, Float, useScroll } from "@react-three/drei";
-import { motion, useScroll as useFramerScroll, useTransform, AnimatePresence } from "framer-motion";
+import { motion, useScroll as useFramerScroll, useTransform } from "framer-motion";
 import * as THREE from "three";
-import { Check, X, MessageCircle, ChevronDown, Zap, Shield, Clock, BarChart3, Globe, Smartphone, Rocket, Layers, MousePointerClick } from "lucide-react";
+import { Check, X, MessageCircle, ChevronDown, Zap, Shield, Clock, BarChart3, Globe, Smartphone, Rocket, Layers } from "lucide-react";
 
 // --- DETECÇÃO MOBILE ---
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -79,7 +79,7 @@ function Scene({ entered, setEntered }) {
   );
 }
 
-// --- ANIMAÇÃO DE SCROLL (REVEAL) ---
+// --- ANIMAÇÃO DE SCROLL ---
 function RevealOnScroll({ children, delay = 0 }) {
   return (
     <motion.div
@@ -197,22 +197,17 @@ function ComparativoItem({ text, bom, ruim }) {
 // --- APP PRINCIPAL ---
 export default function App() {
   const [entered, setEntered] = useState(false);
-  const [showScrollHint, setShowScrollHint] = useState(false); 
   const { scrollYProgress } = useFramerScroll();
   
-  const opacityHero = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
-  const yHero = useTransform(scrollYProgress, [0, 0.1], [0, -50]);
-  // Aumentei o range para ele demorar mais a sumir (0.15 = 15% do scroll)
-  const scrollIndicatorOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
+  // Controle de scroll APENAS para SAÍDA do Hero (ele desaparece ao rolar pra baixo)
+  const opacityHero = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
+  const yHero = useTransform(scrollYProgress, [0, 0.2], [0, -50]);
   
   const WHATSAPP_LINK = "https://wa.me/5555991844071?text=Ol%C3%A1!%20Vi%20o%20site%20e%20quero%20a%20implanta%C3%A7%C3%A3o%20de%2099,90.";
   const PAYMENT_LINK = "https://payment-link-v3.stone.com.br/pl_zoZrQw9PM6g3Ag2H4sryNejKGJ0WxpXd";
 
   const handleEnter = () => {
     setEntered(true);
-    setTimeout(() => {
-      setShowScrollHint(true);
-    }, 1000); 
   };
 
   return (
@@ -233,7 +228,7 @@ export default function App() {
       {/* UI LAYER */}
       <div className={`relative z-10 transition-all duration-1000 ${entered ? "overflow-y-auto h-screen" : "overflow-hidden h-screen"}`}>
         
-        {/* LANDING SCREEN (BOTÃO DE ENTRADA) */}
+        {/* TELA DE CAPA (BOTÃO) */}
         {!entered && (
           <div className="absolute inset-0 flex flex-col items-center justify-end pb-32 pointer-events-none px-4">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center pointer-events-auto z-50">
@@ -253,64 +248,36 @@ export default function App() {
           </div>
         )}
 
-        {/* --- O BOTÃO DE SCROLL (DESTAQUE ABSOLUTO) --- */}
-        {/* Ele está FORA do fluxo principal para garantir que apareça acima de tudo */}
-        <AnimatePresence>
-          {entered && showScrollHint && (
-            <motion.div 
-              style={{ opacity: scrollIndicatorOpacity }}
-              initial={{ opacity: 0, scale: 0.8, y: 20 }} 
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5, ease: "backOut" }}
-              className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] pointer-events-none"
-            >
-              <div className="
-                relative flex flex-col items-center gap-2 px-8 py-4 rounded-full
-                bg-zinc-900/60 backdrop-blur-xl border border-white/20
-                shadow-[0_0_30px_rgba(239,68,68,0.2)]
-              ">
-                {/* Ícone Pulsante */}
-                <motion.div 
-                  animate={{ y: [0, 6, 0] }} 
-                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                  className="text-red-500"
-                >
-                  <ChevronDown size={28} strokeWidth={3} />
-                </motion.div>
-                
-                {/* Texto */}
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white whitespace-nowrap">
-                  Role para Baixo
-                </p>
-                
-                {/* Brilho extra */}
-                <div className="absolute inset-0 rounded-full border border-white/5 pointer-events-none"></div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* CONTEÚDO SCROLLÁVEL */}
         {entered && (
           <div className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-24 relative">
             
-            {/* HERO */}
-            <motion.div style={{ opacity: opacityHero, y: yHero }} className="min-h-[85vh] flex flex-col justify-center items-center text-center pt-32 pb-20 relative">
-              <h2 className="text-4xl md:text-8xl font-bold tracking-tighter mb-8 leading-[0.9]">
-                O Fim dos Sites de <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">R$ 3.000 Reais.</span>
-              </h2>
-              <p className="text-lg md:text-2xl text-zinc-300 max-w-3xl font-light leading-relaxed mb-10">
-                A tecnologia evoluiu. Assine o futuro da sua presença digital por menos de R$ 50/mês.
-              </p>
-              <div className="flex flex-col md:flex-row gap-4">
-                 <a href="#pricing" className="bg-red-600 text-white px-8 py-4 rounded-full font-bold hover:bg-red-700 transition-colors cursor-pointer">Ver Planos</a>
-                 <a href={WHATSAPP_LINK} target="_blank" className="bg-white/10 text-white px-8 py-4 rounded-full font-bold hover:bg-white/20 transition-colors cursor-pointer">Falar com Consultor</a>
-              </div>
+            {/* HERO PRINCIPAL (APARECE SOZINHO LOGO APÓS O CLIQUE) */}
+            {/* A animação 'animate' faz ele aparecer suavemente após 1.2s (tempo da viagem da câmera) */}
+            <motion.div 
+              style={{ opacity: opacityHero, y: yHero }} // Mantém o fade-out ao rolar
+              className="min-h-[85vh] flex flex-col justify-center items-center text-center pt-32 pb-20 relative"
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.2, duration: 0.8, ease: "easeOut" }} // <--- AQUI ESTÁ O SEGREDO
+              >
+                <h2 className="text-4xl md:text-8xl font-bold tracking-tighter mb-8 leading-[0.9]">
+                  O Fim dos Sites de <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">R$ 3.000 Reais.</span>
+                </h2>
+                <p className="text-lg md:text-2xl text-zinc-300 max-w-3xl mx-auto font-light leading-relaxed mb-10">
+                  A tecnologia evoluiu. Assine o futuro da sua presença digital por menos de R$ 50/mês.
+                </p>
+                <div className="flex flex-col md:flex-row gap-4 justify-center">
+                   <a href="#pricing" className="bg-red-600 text-white px-8 py-4 rounded-full font-bold hover:bg-red-700 transition-colors cursor-pointer shadow-lg shadow-red-900/40">Ver Planos</a>
+                   <a href={WHATSAPP_LINK} target="_blank" className="bg-white/10 text-white px-8 py-4 rounded-full font-bold hover:bg-white/20 transition-colors cursor-pointer border border-white/5">Falar com Consultor</a>
+                </div>
+              </motion.div>
             </motion.div>
 
-            {/* STATS */}
+            {/* O RESTO DO SITE SEGUE ABAIXO... */}
             <StatsBar />
 
             {/* COMPARATIVO */}
