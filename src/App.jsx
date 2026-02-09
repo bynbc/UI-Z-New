@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { MeshTransmissionMaterial, Sparkles, Environment, Float, useScroll } from "@react-three/drei";
-import { motion, useScroll as useFramerScroll, useTransform } from "framer-motion";
+import { motion, useScroll as useFramerScroll, useTransform, AnimatePresence } from "framer-motion";
 import * as THREE from "three";
 import { Check, X, MessageCircle, ChevronDown, Zap, Shield, Clock, BarChart3, Globe, Smartphone, Rocket, Layers, MousePointerClick } from "lucide-react";
 
@@ -79,21 +79,21 @@ function Scene({ entered, setEntered }) {
   );
 }
 
-// --- COMPONENTE DE ANIMAÇÃO DE SCROLL (NOVO) ---
+// --- ANIMAÇÃO DE SCROLL (REVEAL) ---
 function RevealOnScroll({ children, delay = 0 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 50 }}
+      initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-10%" }} // Dispara quando 10% do elemento aparece
-      transition={{ duration: 0.8, delay: delay, ease: "easeOut" }}
+      viewport={{ once: true, margin: "-10%" }}
+      transition={{ duration: 0.6, delay: delay, ease: "easeOut" }}
     >
       {children}
     </motion.div>
   );
 }
 
-// --- UI COMPONENTS ---
+// --- SUB-COMPONENTES UI ---
 function StatsBar() {
   return (
     <RevealOnScroll>
@@ -202,6 +202,8 @@ export default function App() {
   
   const opacityHero = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
   const yHero = useTransform(scrollYProgress, [0, 0.1], [0, -50]);
+  // Aumentei o range para ele demorar mais a sumir (0.15 = 15% do scroll)
+  const scrollIndicatorOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
   
   const WHATSAPP_LINK = "https://wa.me/5555991844071?text=Ol%C3%A1!%20Vi%20o%20site%20e%20quero%20a%20implanta%C3%A7%C3%A3o%20de%2099,90.";
   const PAYMENT_LINK = "https://payment-link-v3.stone.com.br/pl_zoZrQw9PM6g3Ag2H4sryNejKGJ0WxpXd";
@@ -231,7 +233,7 @@ export default function App() {
       {/* UI LAYER */}
       <div className={`relative z-10 transition-all duration-1000 ${entered ? "overflow-y-auto h-screen" : "overflow-hidden h-screen"}`}>
         
-        {/* LANDING */}
+        {/* LANDING SCREEN (BOTÃO DE ENTRADA) */}
         {!entered && (
           <div className="absolute inset-0 flex flex-col items-center justify-end pb-32 pointer-events-none px-4">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center pointer-events-auto z-50">
@@ -251,6 +253,44 @@ export default function App() {
           </div>
         )}
 
+        {/* --- O BOTÃO DE SCROLL (DESTAQUE ABSOLUTO) --- */}
+        {/* Ele está FORA do fluxo principal para garantir que apareça acima de tudo */}
+        <AnimatePresence>
+          {entered && showScrollHint && (
+            <motion.div 
+              style={{ opacity: scrollIndicatorOpacity }}
+              initial={{ opacity: 0, scale: 0.8, y: 20 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5, ease: "backOut" }}
+              className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] pointer-events-none"
+            >
+              <div className="
+                relative flex flex-col items-center gap-2 px-8 py-4 rounded-full
+                bg-zinc-900/60 backdrop-blur-xl border border-white/20
+                shadow-[0_0_30px_rgba(239,68,68,0.2)]
+              ">
+                {/* Ícone Pulsante */}
+                <motion.div 
+                  animate={{ y: [0, 6, 0] }} 
+                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                  className="text-red-500"
+                >
+                  <ChevronDown size={28} strokeWidth={3} />
+                </motion.div>
+                
+                {/* Texto */}
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white whitespace-nowrap">
+                  Role para Baixo
+                </p>
+                
+                {/* Brilho extra */}
+                <div className="absolute inset-0 rounded-full border border-white/5 pointer-events-none"></div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* CONTEÚDO SCROLLÁVEL */}
         {entered && (
           <div className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-24 relative">
@@ -265,27 +305,9 @@ export default function App() {
                 A tecnologia evoluiu. Assine o futuro da sua presença digital por menos de R$ 50/mês.
               </p>
               <div className="flex flex-col md:flex-row gap-4">
-                 <a href="#pricing" className="bg-red-600 text-white px-8 py-4 rounded-full font-bold hover:bg-red-700 transition-colors">Ver Planos</a>
-                 <a href={WHATSAPP_LINK} target="_blank" className="bg-white/10 text-white px-8 py-4 rounded-full font-bold hover:bg-white/20 transition-colors">Falar com Consultor</a>
+                 <a href="#pricing" className="bg-red-600 text-white px-8 py-4 rounded-full font-bold hover:bg-red-700 transition-colors cursor-pointer">Ver Planos</a>
+                 <a href={WHATSAPP_LINK} target="_blank" className="bg-white/10 text-white px-8 py-4 rounded-full font-bold hover:bg-white/20 transition-colors cursor-pointer">Falar com Consultor</a>
               </div>
-
-              {/* INDICADOR DE SCROLL - AGORA ABSOLUTO NO FIM DA PRIMEIRA TELA */}
-              {showScrollHint && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }} 
-                  animate={{ opacity: 1, y: 0 }} 
-                  className="absolute bottom-10 left-1/2 -translate-x-1/2 pointer-events-none"
-                >
-                  <div className="bg-black/60 backdrop-blur-xl px-8 py-4 rounded-full border border-red-500/30 flex flex-col items-center animate-pulse shadow-lg shadow-black/50">
-                    <p className="text-[10px] uppercase tracking-[0.3em] text-white font-bold mb-2 flex items-center gap-2 whitespace-nowrap">
-                      <MousePointerClick size={14} className="text-red-500"/> Role para Baixo
-                    </p>
-                    <motion.div animate={{ y: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 1.5 }}>
-                      <ChevronDown className="text-red-500" size={24} />
-                    </motion.div>
-                  </div>
-                </motion.div>
-              )}
             </motion.div>
 
             {/* STATS */}
