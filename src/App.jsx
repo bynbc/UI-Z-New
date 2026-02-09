@@ -1,11 +1,11 @@
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { MeshTransmissionMaterial, Sparkles, Environment, Float, useScroll } from "@react-three/drei";
-import { AnimatePresence, motion, useScroll as useFramerScroll, useTransform } from "framer-motion";
+import { motion, useScroll as useFramerScroll, useTransform } from "framer-motion";
 import * as THREE from "three";
-import { Check, X, MessageCircle, ChevronDown, Zap, Shield, Clock, BarChart3, Globe, Smartphone, Rocket, Layers } from "lucide-react";
+import { Check, X, MessageCircle, ChevronDown, Zap, Shield, Clock, BarChart3, Globe, Smartphone, Rocket, Layers, MousePointerClick } from "lucide-react";
 
-// --- DETECÇÃO MOBILE ---
+// --- DETECÇÃO MOBILE (PERFORMANCE) ---
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
 // --- 3D REATIVO OTIMIZADO ---
@@ -22,34 +22,39 @@ function ReactiveLiquidKnot({ entered, setEntered }) {
   useFrame((state, delta) => {
     if (!knotRef.current) return;
 
-    // 1. Física Simplificada
-    const dx = mouse.x - lastMouse.current.x;
-    const dy = mouse.y - lastMouse.current.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    
-    // Suavização
-    velocity.current = THREE.MathUtils.lerp(velocity.current, dist * 100, 0.1);
-    lastMouse.current = { x: mouse.x, y: mouse.y };
+    // --- LÓGICA DESKTOP (Pesada e Interativa) ---
+    if (!isMobile) {
+      // 1. Física do Mouse
+      const dx = mouse.x - lastMouse.current.x;
+      const dy = mouse.y - lastMouse.current.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      velocity.current = THREE.MathUtils.lerp(velocity.current, dist * 100, 0.1);
+      lastMouse.current = { x: mouse.x, y: mouse.y };
 
-    // 2. Reação do Material (SÓ NO DESKTOP PARA POUPAR CPU)
-    if (materialRef.current && !isMobile) {
-      materialRef.current.distortion = THREE.MathUtils.lerp(0.3, 0.8, velocity.current / 5);
-      materialRef.current.chromaticAberration = THREE.MathUtils.lerp(0.4, 1.0, velocity.current / 5);
+      // 2. Reação do Material
+      if (materialRef.current) {
+        materialRef.current.distortion = THREE.MathUtils.lerp(0.3, 0.8, velocity.current / 5);
+        materialRef.current.chromaticAberration = THREE.MathUtils.lerp(0.4, 1.0, velocity.current / 5);
+      }
+
+      // 3. Rotação e Parallax
+      knotRef.current.rotation.x += delta * 0.1;
+      knotRef.current.rotation.y += delta * 0.15;
+      
+      if (!entered) {
+        const targetRotationX = (mouse.y * viewport.height) / 100;
+        const targetRotationY = (mouse.x * viewport.width) / 100;
+        knotRef.current.rotation.x = THREE.MathUtils.lerp(knotRef.current.rotation.x, targetRotationX, 0.05);
+        knotRef.current.rotation.y = THREE.MathUtils.lerp(knotRef.current.rotation.y, targetRotationY, 0.05);
+      }
+    } 
+    // --- LÓGICA MOBILE (Estática) ---
+    else {
+      // Apenas uma rotação beeem lenta constante para não parecer travado
+      knotRef.current.rotation.y += delta * 0.05;
     }
 
-    // 3. Rotação
-    knotRef.current.rotation.x += delta * 0.1;
-    knotRef.current.rotation.y += delta * 0.15;
-
-    // Parallax (Desligado no mobile)
-    if (!entered && !isMobile) {
-      const targetRotationX = (mouse.y * viewport.height) / 100;
-      const targetRotationY = (mouse.x * viewport.width) / 100;
-      knotRef.current.rotation.x = THREE.MathUtils.lerp(knotRef.current.rotation.x, targetRotationX, 0.05);
-      knotRef.current.rotation.y = THREE.MathUtils.lerp(knotRef.current.rotation.y, targetRotationY, 0.05);
-    }
-
-    // 4. Câmera
+    // --- CÂMERA (Sempre roda para o site funcionar) ---
     camera.position.lerp(targetPos, 0.05);
     const lookAtTarget = entered ? new THREE.Vector3(0, -2, -10) : new THREE.Vector3(0, 0, 0);
     const currentLookAt = new THREE.Vector3(0, 0, -2);
@@ -60,29 +65,26 @@ function ReactiveLiquidKnot({ entered, setEntered }) {
   const handleInteract = () => { if(!entered) setEntered(true); };
 
   return (
-    <Float speed={isMobile ? 1 : 2} rotationIntensity={0.5} floatIntensity={0.5}>
+    <Float speed={isMobile ? 0 : 2} rotationIntensity={isMobile ? 0 : 0.5} floatIntensity={isMobile ? 0 : 0.5}>
       <mesh 
         ref={knotRef} 
         onClick={handleInteract} 
-        onPointerOver={() => { document.body.style.cursor = 'pointer' }} 
-        onPointerOut={() => { document.body.style.cursor = 'auto' }}
+        rotation={[0, 0, 0]} // Posição inicial fixa
+        onPointerOver={() => { if(!isMobile) document.body.style.cursor = 'pointer' }} 
+        onPointerOut={() => { if(!isMobile) document.body.style.cursor = 'auto' }}
       >
-        {/* GEOMETRIA REDUZIDA NO MOBILE (64 segmentos vs 128) */}
         <torusKnotGeometry args={[1.8, 0.65, isMobile ? 64 : 128, isMobile ? 16 : 32]} />
         
         {isMobile ? (
-          // MATERIAL LEVE (MOBILE): Vidro fake muito rápido
-          <meshPhysicalMaterial 
-            transparent 
-            opacity={0.9} // Quase transparente
-            roughness={0} // Liso como vidro
-            metalness={0.1} 
-            transmission={0.9} // Deixa luz passar
-            thickness={1}
-            color="#ffffff"
+          // MATERIAL MOBILE (Leve e Escuro)
+          <meshStandardMaterial 
+            color="#111111" // Quase preto
+            roughness={0.1} // Brilhante
+            metalness={0.8} // Metálico
+            envMapIntensity={2} // Reflete bem as luzes
           />
         ) : (
-          // MATERIAL PESADO (DESKTOP): Vidro líquido real
+          // MATERIAL DESKTOP (Vidro Líquido Real)
           <MeshTransmissionMaterial 
             ref={materialRef} 
             backside={true} 
@@ -110,14 +112,13 @@ function Scene({ entered, setEntered }) {
       <Environment preset="city" blur={1} />
       <spotLight position={[-10, 10, 10]} intensity={40} color="#ff4d4d" angle={0.5} />
       <spotLight position={[10, -10, -10]} intensity={40} color="#4d94ff" angle={0.5} />
-      {/* Menos partículas no mobile */}
-      <Sparkles count={isMobile ? 20 : 80} size={5} opacity={0.6} scale={15} color="#fff" />
+      <Sparkles count={isMobile ? 15 : 80} size={5} opacity={0.6} scale={15} color="#fff" />
       <ReactiveLiquidKnot entered={entered} setEntered={setEntered} />
     </>
   );
 }
 
-// --- SUB-COMPONENTES UI (Mantidos para não quebrar) ---
+// --- UI COMPONENTS ---
 function StatsBar() {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-12 border-y border-white/10 bg-black/50 backdrop-blur-sm">
@@ -211,26 +212,26 @@ function ComparativoItem({ text, bom, ruim }) {
 // --- APP PRINCIPAL ---
 export default function App() {
   const [entered, setEntered] = useState(false);
-  const [showScrollHint, setShowScrollHint] = useState(false); // Estado para o ícone
+  const [showScrollHint, setShowScrollHint] = useState(false); 
   const { scrollYProgress } = useFramerScroll();
   const opacityHero = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
   const yHero = useTransform(scrollYProgress, [0, 0.1], [0, -50]);
   
-  const WHATSAPP_LINK = "https://wa.me/5555991844071?text=Ol%C3%A1!%20Vi%20o%20site%20e%20quero%20come%C3%A7ar.";
+  const WHATSAPP_LINK = "https://wa.me/5555991844071?text=Ol%C3%A1!%20Vi%20o%20site%20e%20quero%20a%20implanta%C3%A7%C3%A3o%20de%2099,90.";
   const PAYMENT_LINK = "https://payment-link-v3.stone.com.br/pl_zoZrQw9PM6g3Ag2H4sryNejKGJ0WxpXd";
 
-  // Lógica do clique: Ativa o "entered" e agenda o ícone para 2.5s depois
   const handleEnter = () => {
     setEntered(true);
+    // Ícone aparece rápido (0.5s)
     setTimeout(() => {
       setShowScrollHint(true);
-    }, 2500); // Espera a câmera viajar
+    }, 500); 
   };
 
   return (
     <div className="relative w-full min-h-screen bg-black text-white font-sans selection:bg-red-500 selection:text-white">
       
-      {/* 3D LAYER - TRAVADO EM BAIXA RESOLUÇÃO NO MOBILE */}
+      {/* 3D LAYER */}
       <div className="fixed inset-0 z-0">
         <Canvas 
           dpr={isMobile ? [1, 1] : [1, 1.5]} 
@@ -258,40 +259,44 @@ export default function App() {
               </div>
               <h1 className="text-6xl md:text-9xl font-bold tracking-tighter mb-2 text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]">UI Z</h1>
               <p className="text-zinc-300 mb-8 tracking-[0.3em] text-xs md:text-sm uppercase font-semibold drop-shadow-md">Seu Site Profissional por Assinatura</p>
-              <button onClick={handleEnter} className="group relative px-10 py-4 bg-white text-black rounded-full text-sm font-bold tracking-[0.2em] uppercase transition-all hover:bg-red-600 hover:text-white hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.2)]">
+              <button onClick={handleEnter} className="group relative px-10 py-4 bg-white text-black rounded-full text-sm font-bold tracking-[0.2em] uppercase transition-all hover:bg-red-600 hover:text-white hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.2)] cursor-pointer">
                 Clique e Descubra
               </button>
             </motion.div>
           </div>
         )}
 
-        {/* INDICADOR DE SCROLL (SÓ APARECE DEPOIS DO TIMEOUT) */}
+        {/* INDICADOR DE SCROLL - CENTRALIZADO FORÇADO */}
         {entered && showScrollHint && (
           <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }}
-            className="fixed bottom-8 left-0 right-0 z-50 flex flex-col items-center pointer-events-none"
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            // TRUQUE DE CSS PARA CENTRALIZAR EXATAMENTE NO MEIO DA TELA
+            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center pointer-events-none"
           >
-            <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2">Role para Baixo</p>
-            <motion.div animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
-              <ChevronDown className="text-white/50" />
-            </motion.div>
+            <div className="bg-black/60 backdrop-blur-xl px-8 py-4 rounded-full border border-red-500/30 flex flex-col items-center animate-pulse shadow-lg shadow-black/50">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-white font-bold mb-2 flex items-center gap-2 whitespace-nowrap">
+                <MousePointerClick size={14} className="text-red-500"/> Role para Baixo
+              </p>
+              <motion.div animate={{ y: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 1.5 }}>
+                <ChevronDown className="text-red-500" size={24} />
+              </motion.div>
+            </div>
           </motion.div>
         )}
 
-        {/* CONTEÚDO COMPLETO (SÓ RENDERIZA SE ENTROU) */}
+        {/* CONTEÚDO SCROLLÁVEL */}
         {entered && (
           <div className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-24">
             
-            {/* 1. HERO EXPANDIDO */}
+            {/* HERO */}
             <motion.div style={{ opacity: opacityHero, y: yHero }} className="min-h-[60vh] flex flex-col justify-center items-center text-center pt-32 pb-20">
               <h2 className="text-4xl md:text-8xl font-bold tracking-tighter mb-8 leading-[0.9]">
                 O Fim dos Sites de <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">R$ 3.000 Reais.</span>
               </h2>
               <p className="text-lg md:text-2xl text-zinc-300 max-w-3xl font-light leading-relaxed mb-10">
-                A tecnologia evoluiu. Você não precisa mais pagar uma fortuna por um site estático que envelhece em meses. Assine o futuro da sua presença digital.
+                A tecnologia evoluiu. Assine o futuro da sua presença digital por menos de R$ 50/mês.
               </p>
               <div className="flex flex-col md:flex-row gap-4">
                  <a href="#pricing" className="bg-red-600 text-white px-8 py-4 rounded-full font-bold hover:bg-red-700 transition-colors">Ver Planos</a>
@@ -299,10 +304,10 @@ export default function App() {
               </div>
             </motion.div>
 
-            {/* 2. BARRA DE ESTATÍSTICAS */}
+            {/* STATS */}
             <StatsBar />
 
-            {/* 3. COMPARATIVO */}
+            {/* COMPARATIVO */}
             <div className="py-24 border-b border-white/5">
               <div className="text-center mb-16">
                 <h3 className="text-3xl font-bold mb-4">A Realidade do Mercado</h3>
@@ -314,7 +319,7 @@ export default function App() {
                   <ul className="space-y-5">
                     <ComparativoItem ruim text="Investimento: R$ 2.000 a R$ 5.000" />
                     <ComparativoItem ruim text="Prazo: 30 a 60 dias" />
-                    <ComparativoItem ruim text="Atualizações: Cobradas por hora" />
+                    <ComparativoItem ruim text="Cobrança por Atualizações" />
                     <ComparativoItem ruim text="Tecnologia: Wordpress (Lento)" />
                   </ul>
                 </div>
@@ -322,7 +327,7 @@ export default function App() {
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-1 rounded-full text-xs font-bold uppercase tracking-widest shadow-lg">Recomendado</div>
                   <h4 className="text-3xl font-bold mb-8 text-white flex items-center gap-3"><Zap className="text-red-500 fill-red-500" size={28}/> UI Z</h4>
                   <ul className="space-y-5">
-                    <ComparativoItem bom text="Implantação: Apenas R$ 100,00" />
+                    <ComparativoItem bom text="Implantação: Apenas R$ 99,90" />
                     <ComparativoItem bom text="Entrega: Imediata / Flash" />
                     <ComparativoItem bom text="Atualizações: ILIMITADAS e Grátis" />
                     <ComparativoItem bom text="Tecnologia: React 3D (O Futuro)" />
@@ -331,10 +336,10 @@ export default function App() {
               </div>
             </div>
 
-            {/* 4. PASSO A PASSO */}
+            {/* TIMELINE */}
             <ProcessTimeline />
 
-            {/* 5. RECURSOS TÉCNICOS */}
+            {/* FEATURES */}
             <div className="py-20">
               <h3 className="text-3xl font-bold mb-12 text-center">Engine V8 de Performance</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -347,16 +352,16 @@ export default function App() {
               </div>
             </div>
 
-            {/* 6. FAQ */}
+            {/* FAQ */}
             <FAQSection />
 
-            {/* 7. OFERTA FINAL */}
+            {/* PRICING FINAL */}
             <div id="pricing" className="flex flex-col items-center text-center bg-zinc-900/60 border border-white/10 rounded-[3rem] p-8 md:p-20 backdrop-blur-xl relative overflow-hidden mt-20">
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-orange-500 to-red-500"></div>
               <h3 className="text-zinc-400 uppercase tracking-[0.2em] text-sm font-bold mb-6">Comece Hoje Mesmo</h3>
               <div className="flex flex-col md:flex-row items-baseline justify-center gap-4 mb-2">
                  <span className="text-2xl text-zinc-600 line-through font-medium">R$ 2.500</span>
-                 <div className="text-7xl md:text-8xl font-bold text-white tracking-tighter">R$ 100</div>
+                 <div className="text-6xl md:text-8xl font-bold text-white tracking-tighter">R$ 99,90</div>
               </div>
               <p className="text-xl text-zinc-300 mb-10">Taxa única de implantação + R$ 49,90/mês</p>
               <div className="flex flex-col md:flex-row gap-4 w-full max-w-lg">
