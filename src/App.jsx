@@ -6,7 +6,6 @@ import * as THREE from "three";
 import { Check, X, MessageCircle, ChevronDown, Zap, Shield, Clock, BarChart3, Globe, Smartphone, Rocket, Layers } from "lucide-react";
 
 // --- DETECÇÃO MOBILE ---
-// Adicionei um listener para garantir que a detecção funcione mesmo se redimensionar a tela
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -32,7 +31,7 @@ function ReactiveLiquidKnot({ entered, setEntered, isMobile }) {
     if (!knotRef.current) return;
 
     if (!isMobile) {
-      // --- LÓGICA DESKTOP (EFEITO VIDRO LÍQUIDO ATIVO) ---
+      // --- LÓGICA DESKTOP ---
       const dx = mouse.x - lastMouse.current.x;
       const dy = mouse.y - lastMouse.current.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -40,12 +39,9 @@ function ReactiveLiquidKnot({ entered, setEntered, isMobile }) {
       lastMouse.current = { x: mouse.x, y: mouse.y };
 
       if (materialRef.current) {
-        // Distorção reativa ao mouse
         materialRef.current.distortion = THREE.MathUtils.lerp(0.3, 0.8, velocity.current / 5);
-        // O efeito "Arco-íris" aumenta com o movimento
         materialRef.current.chromaticAberration = THREE.MathUtils.lerp(1.0, 2.0, velocity.current / 5);
       }
-      // Rotação suave + Parallax
       knotRef.current.rotation.x += delta * 0.1;
       knotRef.current.rotation.y += delta * 0.15;
       
@@ -56,7 +52,7 @@ function ReactiveLiquidKnot({ entered, setEntered, isMobile }) {
         knotRef.current.rotation.y = THREE.MathUtils.lerp(knotRef.current.rotation.y, targetRotationY, 0.05);
       }
     } else {
-      // --- LÓGICA MOBILE (ESTÁTICA/LEVE) ---
+      // --- LÓGICA MOBILE ---
       knotRef.current.rotation.y += delta * 0.05;
     }
 
@@ -72,28 +68,20 @@ function ReactiveLiquidKnot({ entered, setEntered, isMobile }) {
   return (
     <Float speed={isMobile ? 0 : 2} rotationIntensity={isMobile ? 0 : 0.5} floatIntensity={isMobile ? 0 : 0.5}>
       <mesh ref={knotRef} onClick={handleInteract} rotation={[0, 0, 0]} onPointerOver={() => { if(!isMobile) document.body.style.cursor = 'pointer' }} onPointerOut={() => { if(!isMobile) document.body.style.cursor = 'auto' }}>
-        {/* Geometria: Menos polígonos no mobile */}
         <torusKnotGeometry args={[1.8, 0.65, isMobile ? 80 : 150, isMobile ? 24 : 32]} />
         
         {isMobile ? (
-          // --- MATERIAL MOBILE: Metal Escuro (Otimizado) ---
-          <meshStandardMaterial 
-            color="#111" 
-            roughness={0.1} 
-            metalness={0.9} 
-            envMapIntensity={2} 
-          />
+          <meshStandardMaterial color="#111" roughness={0.1} metalness={0.9} envMapIntensity={2} />
         ) : (
-          // --- MATERIAL DESKTOP: Vidro Rainbow (Restaurado) ---
           <MeshTransmissionMaterial 
             ref={materialRef} 
             backside={true} 
             samples={6} 
             resolution={512} 
             transmission={1} 
-            thickness={2.0} // Mais grosso para distorcer mais (efeito bonito)
-            roughness={0.0} // Totalmente liso
-            chromaticAberration={1.5} // Efeito arco-íris FORTE (como no primeiro print)
+            thickness={2.0} 
+            roughness={0.0} 
+            chromaticAberration={1.5} 
             anisotropy={0.5} 
             distortion={0.3} 
             distortionScale={0.5} 
@@ -136,10 +124,11 @@ function RevealOnScroll({ children, delay = 0 }) {
 function StatsBar({ delay = 0 }) {
   return (
     <motion.div 
-      initial={{ opacity: 0, y: -20 }}
+      initial={{ opacity: 0, y: 20 }} // Entra vindo de baixo agora
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: delay, duration: 0.5 }}
-      className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 py-6 md:py-8 border-b border-white/10 bg-black/40 backdrop-blur-md rounded-2xl mb-8 w-full"
+      // Bordas: tirei o border-b e pus border-t e border-b para ficar como um "rodapé" dessa seção
+      className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 py-6 md:py-8 border-y border-white/10 bg-black/40 backdrop-blur-md rounded-2xl w-full"
     >
       <StatItem number="+500" label="Projetos Entregues" />
       <StatItem number="99%" label="Satisfação" />
@@ -292,17 +281,15 @@ export default function App() {
         {entered && (
           <div className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-24 relative pt-12 md:pt-20">
             
-            {/* HERO SECTION - CORREÇÃO DE VISIBILIDADE */}
-            {/* Removida a dependência de scroll. O texto simplesmente entra. */}
+            {/* HERO SECTION - INVERTIDA E COMPACTA */}
             <div className="flex flex-col items-center text-center relative z-20 min-h-[500px]">
               
-              <StatsBar delay={0.2} />
-
+              {/* 1. TEXTO E OFERTA (AGORA VEM PRIMEIRO) */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.8 }}
-                className="mb-16 w-full"
+                transition={{ delay: 0.2, duration: 0.8 }}
+                className="mb-12 w-full"
               >
                 <h2 className="text-3xl md:text-8xl font-bold tracking-tighter mb-6 leading-tight">
                   O Fim dos Sites de <br />
@@ -316,6 +303,10 @@ export default function App() {
                    <a href={WHATSAPP_LINK} target="_blank" className="bg-white/10 text-white px-8 py-4 rounded-full font-bold hover:bg-white/20 transition-colors cursor-pointer border border-white/5">Falar com Consultor</a>
                 </div>
               </motion.div>
+
+              {/* 2. STATS BAR (AGORA VEM DEPOIS) */}
+              <StatsBar delay={0.4} />
+
             </div>
 
             {/* RESTO DO SITE */}
