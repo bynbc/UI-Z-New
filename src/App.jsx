@@ -386,7 +386,7 @@ export default function App() {
             </RevealOnScroll>
 
             <footer className="mt-32 pt-10 border-t border-white/5 text-center text-zinc-600 text-sm">
-              <p>© 2024 UI Z. Todos os direitos reservados.</p>
+              <p>© 2026 UI Z. Todos os direitos reservados.</p>
               <p className="mt-2">Feito com tecnologia React 3D.</p>
             </footer>
 
