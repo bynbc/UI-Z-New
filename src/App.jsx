@@ -74,6 +74,10 @@ export default function App() {
   const opacityHero = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const yHero = useTransform(scrollYProgress, [0, 0.2], [0, -50]);
 
+  // LINKS CONFIGURADOS
+  const WHATSAPP_LINK = "https://wa.me/5555991844071?text=Ol%C3%A1!%20Vim%20pelo%20site%20UI%20Z%20e%20quero%20transformar%20minha%20presen%C3%A7a%20digital.";
+  const PAYMENT_LINK = "https://payment-link-v3.stone.com.br/pl_zoZrQw9PM6g3Ag2H4sryNejKGJ0WxpXd";
+
   return (
     <div className="relative w-full min-h-screen bg-black text-white selection:bg-red-500 selection:text-white font-sans">
       
@@ -141,7 +145,7 @@ export default function App() {
               </motion.p>
             </motion.div>
 
-            {/* FEATURES (BENTO GRID) - Texto Fiel ao PDF */}
+            {/* FEATURES (BENTO GRID) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-32">
               <BentoCard title="Design Profissional" delay={0.2}>
                 Site moderno e responsivo que se adapta perfeitamente a celular, tablet e computador. Visual premium com carregamento rápido.
@@ -188,25 +192,44 @@ export default function App() {
                     <li className="flex gap-3"><Check className="text-red-500" size={20}/> Manutenção técnica contínua</li>
                   </ul>
                 </div>
-                <button className="w-full mt-8 bg-white text-black font-bold py-4 rounded-xl hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center gap-2">
+                {/* LINK DE PAGAMENTO STONE */}
+                <a 
+                  href={PAYMENT_LINK} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-full mt-8 bg-white text-black font-bold py-4 rounded-xl hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
                   Assinar Agora <ArrowRight size={18}/>
-                </button>
+                </a>
               </div>
             </div>
 
-            {/* CTA FINAL - Texto Fiel ao PDF */}
+            {/* CTA FINAL */}
             <div className="text-center pb-32">
               <h3 className="text-3xl md:text-5xl font-bold mb-6">Pronto Para Transformar Sua Presença Digital?</h3>
               <p className="text-zinc-400 max-w-2xl mx-auto mb-10 text-lg">
                 Com UI Z, você tem um site profissional completo por menos do que custo de um almoço por semana.
               </p>
               <div className="flex flex-col md:flex-row gap-4 justify-center">
-                <button className="bg-green-500 hover:bg-green-600 text-black font-bold px-8 py-4 rounded-full flex items-center justify-center gap-2 transition-all">
+                {/* LINK WHATSAPP */}
+                <a 
+                  href={WHATSAPP_LINK} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="bg-green-500 hover:bg-green-600 text-black font-bold px-8 py-4 rounded-full flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
                   <MessageCircle size={20} /> Quero Meu Site Agora
-                </button>
-                <button className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-8 py-4 rounded-full flex items-center justify-center gap-2 transition-all">
+                </a>
+                
+                {/* LINK SECUNDÁRIO (WHATSAPP TAMBÉM OU OUTRO) */}
+                <a 
+                   href={WHATSAPP_LINK}
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-8 py-4 rounded-full flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
                   <Instagram size={20} /> Saiba Mais
-                </button>
+                </a>
               </div>
             </div>
 
