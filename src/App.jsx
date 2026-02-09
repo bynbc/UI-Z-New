@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { MeshTransmissionMaterial, Sparkles, Environment, Float, useScroll } from "@react-three/drei";
+import { MeshTransmissionMaterial, Sparkles, Environment, Float } from "@react-three/drei";
 import { motion, useScroll as useFramerScroll, useTransform } from "framer-motion";
 import * as THREE from "three";
-import { Check, X, MessageCircle, ChevronDown, Zap, Shield, Clock, BarChart3, Globe, Smartphone, Rocket, Layers } from "lucide-react";
+import { Check, X, MessageCircle, Zap, Shield, Clock, BarChart3, Globe, Smartphone, Rocket, Layers } from "lucide-react";
 
 // --- DETECÇÃO MOBILE ---
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -15,8 +15,9 @@ function ReactiveLiquidKnot({ entered, setEntered }) {
   const { camera, mouse, viewport } = useThree();
   const lastMouse = useRef({ x: 0, y: 0 });
   const velocity = useRef(0);
-  // Destino da câmera ajustado para não cortar o texto
-  const targetPos = useMemo(() => new THREE.Vector3(0, 0, entered ? -5 : 6), [entered]);
+  
+  // AJUSTE DE POSIÇÃO: No mobile, empurra bem pra trás pra não cortar o texto
+  const targetPos = useMemo(() => new THREE.Vector3(0, entered ? 0.5 : 0, entered ? (isMobile ? -9 : -6) : 6), [entered, isMobile]);
 
   useFrame((state, delta) => {
     if (!knotRef.current) return;
@@ -45,9 +46,8 @@ function ReactiveLiquidKnot({ entered, setEntered }) {
       knotRef.current.rotation.y += delta * 0.05;
     }
 
-    // Câmera viaja mais rápido (0.08) para acompanhar a entrada do texto
     camera.position.lerp(targetPos, 0.08);
-    const lookAtTarget = entered ? new THREE.Vector3(0, -2, -10) : new THREE.Vector3(0, 0, 0);
+    const lookAtTarget = entered ? new THREE.Vector3(0, -1, -10) : new THREE.Vector3(0, 0, 0);
     const currentLookAt = new THREE.Vector3(0, 0, -2);
     currentLookAt.lerp(lookAtTarget, 0.08);
     camera.lookAt(currentLookAt);
@@ -58,9 +58,9 @@ function ReactiveLiquidKnot({ entered, setEntered }) {
   return (
     <Float speed={isMobile ? 0 : 2} rotationIntensity={isMobile ? 0 : 0.5} floatIntensity={isMobile ? 0 : 0.5}>
       <mesh ref={knotRef} onClick={handleInteract} rotation={[0, 0, 0]} onPointerOver={() => { if(!isMobile) document.body.style.cursor = 'pointer' }} onPointerOut={() => { if(!isMobile) document.body.style.cursor = 'auto' }}>
-        <torusKnotGeometry args={[1.8, 0.65, isMobile ? 96 : 128, isMobile ? 24 : 32]} />
+        <torusKnotGeometry args={[1.8, 0.65, isMobile ? 80 : 128, isMobile ? 24 : 32]} />
         {isMobile ? (
-          <meshStandardMaterial color="#1a1a1a" roughness={0.15} metalness={0.9} envMapIntensity={1.5} />
+          <meshStandardMaterial color="#1a1a1a" roughness={0.2} metalness={0.9} envMapIntensity={2} />
         ) : (
           <MeshTransmissionMaterial ref={materialRef} backside={true} samples={6} resolution={512} transmission={1} thickness={1.0} roughness={0.02} chromaticAberration={0.6} anisotropy={0.5} distortion={0.3} distortionScale={0.5} color="#ffffff" toneMapped={false} />
         )}
@@ -75,13 +75,13 @@ function Scene({ entered, setEntered }) {
       <Environment preset="city" blur={1} />
       <spotLight position={[-10, 10, 10]} intensity={40} color="#ff4d4d" angle={0.5} />
       <spotLight position={[10, -10, -10]} intensity={40} color="#4d94ff" angle={0.5} />
-      <Sparkles count={isMobile ? 30 : 80} size={isMobile ? 3 : 5} opacity={0.6} scale={15} color="#fff" />
+      <Sparkles count={isMobile ? 20 : 80} size={isMobile ? 3 : 5} opacity={0.6} scale={15} color="#fff" />
       <ReactiveLiquidKnot entered={entered} setEntered={setEntered} />
     </>
   );
 }
 
-// --- ANIMAÇÃO DE SCROLL ---
+// --- COMPONENTE DE REVEAL (Sem scroll trigger complexo para o Hero) ---
 function RevealOnScroll({ children, delay = 0 }) {
   return (
     <motion.div
@@ -95,30 +95,34 @@ function RevealOnScroll({ children, delay = 0 }) {
   );
 }
 
-// --- UI COMPONENTS ---
+// --- COMPONENTES UI ---
 function StatsBar() {
   return (
-    <RevealOnScroll>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-12 border-y border-white/10 bg-black/50 backdrop-blur-sm">
-        <StatItem number="+500" label="Projetos Entregues" />
-        <StatItem number="99%" label="Satisfação" />
-        <StatItem number="24h" label="Suporte Médio" />
-        <StatItem number="Zero" label="Custo Surpresa" />
-      </div>
-    </RevealOnScroll>
+    <motion.div 
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.5, duration: 0.5 }}
+      className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 py-6 border-b border-white/10 bg-black/40 backdrop-blur-md rounded-2xl mb-8 w-full"
+    >
+      <StatItem number="+500" label="Projetos Entregues" />
+      <StatItem number="99%" label="Satisfação" />
+      <StatItem number="24h" label="Suporte Médio" />
+      <StatItem number="Zero" label="Custo Surpresa" />
+    </motion.div>
   );
 }
 function StatItem({ number, label }) {
   return (
     <div className="text-center">
-      <div className="text-3xl md:text-4xl font-bold text-white mb-1">{number}</div>
-      <div className="text-xs uppercase tracking-widest text-zinc-500">{label}</div>
+      <div className="text-2xl md:text-3xl font-bold text-white mb-1">{number}</div>
+      <div className="text-[10px] md:text-xs uppercase tracking-widest text-zinc-500">{label}</div>
     </div>
   );
 }
+
 function ProcessTimeline() {
   return (
-    <div className="py-20">
+    <div className="py-20 w-full">
       <RevealOnScroll>
         <div className="text-center mb-16">
           <h3 className="text-3xl md:text-4xl font-bold mb-4">Como funciona?</h3>
@@ -150,7 +154,7 @@ function ProcessStep({ number, title, desc, icon, delay }) {
 }
 function FAQSection() {
   return (
-    <div className="py-20 max-w-3xl mx-auto">
+    <div className="py-20 max-w-3xl mx-auto w-full">
       <RevealOnScroll>
         <h3 className="text-3xl font-bold mb-12 text-center">Perguntas Frequentes</h3>
       </RevealOnScroll>
@@ -199,26 +203,21 @@ function ComparativoItem({ text, bom, ruim }) {
 // --- APP PRINCIPAL ---
 export default function App() {
   const [entered, setEntered] = useState(false);
-  const { scrollYProgress } = useFramerScroll();
-  
-  const opacityHero = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
-  const yHero = useTransform(scrollYProgress, [0, 0.2], [0, -50]);
+  // Removi o scrollYProgress que estava causando o bug de opacidade
   
   const WHATSAPP_LINK = "https://wa.me/5555991844071?text=Ol%C3%A1!%20Vi%20o%20site%20e%20quero%20a%20implanta%C3%A7%C3%A3o%20de%2099,90.";
   const PAYMENT_LINK = "https://payment-link-v3.stone.com.br/pl_zoZrQw9PM6g3Ag2H4sryNejKGJ0WxpXd";
 
   const handleEnter = () => {
-    // 1. Ativa o estado
     setEntered(true);
-    // 2. Garante que estamos no topo da página
     window.scrollTo(0, 0);
   };
 
   return (
-    <div className="relative w-full min-h-screen bg-black text-white font-sans selection:bg-red-500 selection:text-white">
+    <div className="relative w-full min-h-screen bg-black text-white font-sans selection:bg-red-500 selection:text-white overflow-x-hidden">
       
       {/* 3D LAYER */}
-      <div className="fixed inset-0 z-0">
+      <div className="fixed inset-0 z-0 pointer-events-none">
         <Canvas 
           dpr={[1, 2]} 
           gl={{ antialias: true, powerPreference: "high-performance" }} 
@@ -230,50 +229,54 @@ export default function App() {
       </div>
 
       {/* UI LAYER */}
-      <div className={`relative z-10 transition-all duration-1000 ${entered ? "overflow-y-auto h-screen" : "overflow-hidden h-screen"}`}>
+      <div className={`relative z-10 w-full transition-all duration-1000 ${entered ? "min-h-screen" : "h-screen overflow-hidden"}`}>
         
-        {/* TELA 1: CAPA (BOTÃO) */}
-        {/* Usando AnimatePresence para garantir que o botão saia suavemente */}
-        <div className={`absolute inset-0 flex flex-col items-center justify-end pb-32 px-4 transition-opacity duration-500 ${entered ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
-            {!entered && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center pointer-events-auto z-50">
-                <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-red-500/10 border border-red-500/30 px-4 py-1.5 backdrop-blur-md">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                  </span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-red-100">Disponível Agora</span>
-                </div>
-                <h1 className="text-6xl md:text-9xl font-bold tracking-tighter mb-2 text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]">UI Z</h1>
-                <p className="text-zinc-300 mb-8 tracking-[0.3em] text-xs md:text-sm uppercase font-semibold drop-shadow-md">Seu Site Profissional por Assinatura</p>
-                <button onClick={handleEnter} className="group relative px-10 py-4 bg-white text-black rounded-full text-sm font-bold tracking-[0.2em] uppercase transition-all hover:bg-red-600 hover:text-white hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.2)] cursor-pointer">
-                  Clique e Descubra
-                </button>
-              </motion.div>
-            )}
-        </div>
+        {/* TELA DE CAPA */}
+        {!entered && (
+          <div className="absolute inset-0 flex flex-col items-center justify-end pb-32 px-4 z-50">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center w-full">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-red-500/10 border border-red-500/30 px-4 py-1.5 backdrop-blur-md">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-red-100">Disponível Agora</span>
+              </div>
+              <h1 className="text-6xl md:text-9xl font-bold tracking-tighter mb-2 text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]">UI Z</h1>
+              <p className="text-zinc-300 mb-8 tracking-[0.3em] text-xs md:text-sm uppercase font-semibold drop-shadow-md">Seu Site Profissional por Assinatura</p>
+              <button onClick={handleEnter} className="group relative px-10 py-4 bg-white text-black rounded-full text-sm font-bold tracking-[0.2em] uppercase transition-all hover:bg-red-600 hover:text-white hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.2)] cursor-pointer z-50 pointer-events-auto">
+                Clique e Descubra
+              </button>
+            </motion.div>
+          </div>
+        )}
 
-        {/* TELA 2: CONTEÚDO SCROLLÁVEL */}
-        {/* Só renderiza o container se entered for true */}
+        {/* CONTEÚDO SCROLLÁVEL */}
         {entered && (
-          <div className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-24 relative">
+          <div className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-24 relative pt-12 md:pt-20">
             
-            {/* HERO PRINCIPAL (APARECE IMEDIATAMENTE - DELAY 0.1s) */}
+            {/* HERO SECTION - FORÇANDO VISIBILIDADE */}
+            {/* Removi style={{opacity}} e usei animate direto. Z-Index alto. */}
             <motion.div 
-              style={{ opacity: opacityHero, y: yHero }} 
-              className="min-h-[85vh] flex flex-col justify-center items-center text-center pt-32 pb-20 relative"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1, delay: 0.2 }}
+              className="flex flex-col items-center text-center relative z-20"
             >
+              
+              <StatsBar delay={0.2} />
+
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                // CORREÇÃO CRÍTICA: Delay de apenas 0.2s para ser instantâneo
-                transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }} 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.6 }}
+                className="mb-16 w-full"
               >
-                <h2 className="text-4xl md:text-8xl font-bold tracking-tighter mb-8 leading-[0.9]">
+                <h2 className="text-3xl md:text-8xl font-bold tracking-tighter mb-6 leading-tight">
                   O Fim dos Sites de <br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">R$ 3.000 Reais.</span>
                 </h2>
-                <p className="text-lg md:text-2xl text-zinc-300 max-w-3xl mx-auto font-light leading-relaxed mb-10">
+                <p className="text-base md:text-2xl text-zinc-300 max-w-3xl mx-auto font-light leading-relaxed mb-8">
                   A tecnologia evoluiu. Assine o futuro da sua presença digital por menos de R$ 50/mês.
                 </p>
                 <div className="flex flex-col md:flex-row gap-4 justify-center">
@@ -283,11 +286,9 @@ export default function App() {
               </motion.div>
             </motion.div>
 
-            {/* O RESTO DO SITE */}
-            <StatsBar />
-
-            {/* COMPARATIVO */}
-            <div className="py-24 border-b border-white/5">
+            {/* RESTO DO SITE */}
+            
+            <div className="py-24 border-b border-white/5 border-t border-white/5">
               <RevealOnScroll>
                 <div className="text-center mb-16">
                   <h3 className="text-3xl font-bold mb-4">A Realidade do Mercado</h3>
@@ -321,11 +322,9 @@ export default function App() {
               </div>
             </div>
 
-            {/* TIMELINE */}
             <ProcessTimeline />
 
-            {/* FEATURES */}
-            <div className="py-20">
+            <div className="py-20 w-full">
               <RevealOnScroll>
                 <h3 className="text-3xl font-bold mb-12 text-center">Engine V8 de Performance</h3>
               </RevealOnScroll>
@@ -339,10 +338,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* FAQ */}
             <FAQSection />
 
-            {/* PRICING FINAL */}
             <RevealOnScroll>
               <div id="pricing" className="flex flex-col items-center text-center bg-zinc-900/60 border border-white/10 rounded-[3rem] p-8 md:p-20 backdrop-blur-xl relative overflow-hidden mt-20">
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-orange-500 to-red-500"></div>
