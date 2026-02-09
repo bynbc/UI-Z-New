@@ -5,7 +5,7 @@ import { motion, useScroll as useFramerScroll, useTransform } from "framer-motio
 import * as THREE from "three";
 import { Check, X, MessageCircle, ChevronDown, Zap, Shield, Clock, BarChart3, Globe, Smartphone, Rocket, Layers, MousePointerClick } from "lucide-react";
 
-// --- DETECÇÃO MOBILE (PERFORMANCE) ---
+// --- DETECÇÃO MOBILE ---
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
 // --- 3D REATIVO OTIMIZADO ---
@@ -50,11 +50,11 @@ function ReactiveLiquidKnot({ entered, setEntered }) {
     } 
     // --- LÓGICA MOBILE (Estática) ---
     else {
-      // Apenas uma rotação beeem lenta constante para não parecer travado
+      // Apenas uma rotação levíssima constante para dar vida
       knotRef.current.rotation.y += delta * 0.05;
     }
 
-    // --- CÂMERA (Sempre roda para o site funcionar) ---
+    // --- CÂMERA ---
     camera.position.lerp(targetPos, 0.05);
     const lookAtTarget = entered ? new THREE.Vector3(0, -2, -10) : new THREE.Vector3(0, 0, 0);
     const currentLookAt = new THREE.Vector3(0, 0, -2);
@@ -69,19 +69,20 @@ function ReactiveLiquidKnot({ entered, setEntered }) {
       <mesh 
         ref={knotRef} 
         onClick={handleInteract} 
-        rotation={[0, 0, 0]} // Posição inicial fixa
+        rotation={[0, 0, 0]} 
         onPointerOver={() => { if(!isMobile) document.body.style.cursor = 'pointer' }} 
         onPointerOut={() => { if(!isMobile) document.body.style.cursor = 'auto' }}
       >
-        <torusKnotGeometry args={[1.8, 0.65, isMobile ? 64 : 128, isMobile ? 16 : 32]} />
+        {/* Geometria um pouco melhor agora que tiramos a física */}
+        <torusKnotGeometry args={[1.8, 0.65, isMobile ? 96 : 128, isMobile ? 24 : 32]} />
         
         {isMobile ? (
-          // MATERIAL MOBILE (Leve e Escuro)
+          // MATERIAL MOBILE (Estilo Metal Líquido Escuro)
           <meshStandardMaterial 
-            color="#111111" // Quase preto
-            roughness={0.1} // Brilhante
-            metalness={0.8} // Metálico
-            envMapIntensity={2} // Reflete bem as luzes
+            color="#1a1a1a" // Preto metálico
+            roughness={0.15} // Brilho acetinado
+            metalness={0.9} // Bem metálico
+            envMapIntensity={1.5}
           />
         ) : (
           // MATERIAL DESKTOP (Vidro Líquido Real)
@@ -112,7 +113,7 @@ function Scene({ entered, setEntered }) {
       <Environment preset="city" blur={1} />
       <spotLight position={[-10, 10, 10]} intensity={40} color="#ff4d4d" angle={0.5} />
       <spotLight position={[10, -10, -10]} intensity={40} color="#4d94ff" angle={0.5} />
-      <Sparkles count={isMobile ? 15 : 80} size={5} opacity={0.6} scale={15} color="#fff" />
+      <Sparkles count={isMobile ? 30 : 80} size={isMobile ? 3 : 5} opacity={0.6} scale={15} color="#fff" />
       <ReactiveLiquidKnot entered={entered} setEntered={setEntered} />
     </>
   );
@@ -214,15 +215,16 @@ export default function App() {
   const [entered, setEntered] = useState(false);
   const [showScrollHint, setShowScrollHint] = useState(false); 
   const { scrollYProgress } = useFramerScroll();
+  
   const opacityHero = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
   const yHero = useTransform(scrollYProgress, [0, 0.1], [0, -50]);
+  const scrollIndicatorOpacity = useTransform(scrollYProgress, [0, 0.05], [1, 0]);
   
   const WHATSAPP_LINK = "https://wa.me/5555991844071?text=Ol%C3%A1!%20Vi%20o%20site%20e%20quero%20a%20implanta%C3%A7%C3%A3o%20de%2099,90.";
   const PAYMENT_LINK = "https://payment-link-v3.stone.com.br/pl_zoZrQw9PM6g3Ag2H4sryNejKGJ0WxpXd";
 
   const handleEnter = () => {
     setEntered(true);
-    // Ícone aparece rápido (0.5s)
     setTimeout(() => {
       setShowScrollHint(true);
     }, 500); 
@@ -234,8 +236,10 @@ export default function App() {
       {/* 3D LAYER */}
       <div className="fixed inset-0 z-0">
         <Canvas 
-          dpr={isMobile ? [1, 1] : [1, 1.5]} 
-          gl={{ antialias: false, powerPreference: "high-performance" }} 
+          // [1, 2] Permite resolução Retina no mobile (Muito mais nítido)
+          dpr={[1, 2]} 
+          // Antialias ligado para suavizar bordas
+          gl={{ antialias: true, powerPreference: "high-performance" }} 
           camera={{ position: [0, 0, 6], fov: 45 }}
         >
           <color attach="background" args={["#050505"]} />
@@ -266,13 +270,13 @@ export default function App() {
           </div>
         )}
 
-        {/* INDICADOR DE SCROLL - CENTRALIZADO FORÇADO */}
+        {/* INDICADOR DE SCROLL - CENTRALIZADO CORRETAMENTE */}
         {entered && showScrollHint && (
           <motion.div 
+            style={{ opacity: scrollIndicatorOpacity }}
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
-            // TRUQUE DE CSS PARA CENTRALIZAR EXATAMENTE NO MEIO DA TELA
-            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center pointer-events-none"
+            className="fixed bottom-12 left-0 right-0 w-full z-50 flex justify-center pointer-events-none"
           >
             <div className="bg-black/60 backdrop-blur-xl px-8 py-4 rounded-full border border-red-500/30 flex flex-col items-center animate-pulse shadow-lg shadow-black/50">
               <p className="text-[10px] uppercase tracking-[0.3em] text-white font-bold mb-2 flex items-center gap-2 whitespace-nowrap">
