@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useScroll as useFramerScroll, useTransform } f
 import * as THREE from "three";
 import { ArrowRight, Check, Instagram, MessageCircle } from "lucide-react";
 
-// --- COMPONENTE 3D: O "Z" LÍQUIDO ---
+// --- COMPONENTE 3D: O "Z" LÍQUIDO OTIMIZADO ---
 function LiquidKnot({ entered }) {
   const knotRef = useRef(null);
   const { camera, mouse } = useThree();
@@ -14,14 +14,16 @@ function LiquidKnot({ entered }) {
 
   useFrame((state, delta) => {
     if (knotRef.current) {
+      // Rotação um pouco mais lenta para economizar processamento visual
       knotRef.current.rotation.x += delta * 0.1;
       knotRef.current.rotation.y += delta * 0.15;
 
       if (!entered) {
+        // Reduzi o fator de parallax no mobile para evitar tontura/lag
         const x = (mouse.x * window.innerWidth) / 500;
         const y = (mouse.y * window.innerHeight) / 500;
-        knotRef.current.rotation.x += y * 0.05;
-        knotRef.current.rotation.y += x * 0.05;
+        knotRef.current.rotation.x += y * 0.02;
+        knotRef.current.rotation.y += x * 0.02;
       }
     }
 
@@ -36,8 +38,12 @@ function LiquidKnot({ entered }) {
   return (
     <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
       <mesh ref={knotRef} position={[0, 0, 0]}>
-        <torusKnotGeometry args={[1.8, 0.6, 300, 30]} />
+        {/* GEOMETRIA REDUZIDA: De 300, 30 para 128, 16. Muito mais leve. */}
+        <torusKnotGeometry args={[1.8, 0.6, 128, 16]} />
         <MeshTransmissionMaterial
+          backside={true}
+          samples={6} // Reduzido de 10 (padrão) para 6
+          resolution={512} // Baixa resolução do buffer de refração (CRUCIAL PRO MOBILE)
           transmission={1}
           thickness={1.5}
           roughness={0.05}
@@ -57,10 +63,12 @@ function LiquidKnot({ entered }) {
 function Scene({ entered }) {
   return (
     <>
-      <Environment preset="city" />
+      {/* Ambiente com resolução menor se possível */}
+      <Environment preset="city" blur={1} />
       <spotLight position={[-10, 10, 10]} angle={0.3} penumbra={1} intensity={20} color="#ef4444" />
       <spotLight position={[10, -10, -10]} angle={0.3} penumbra={1} intensity={20} color="#ef4444" />
-      <Sparkles count={200} size={3} speed={0.2} opacity={0.5} scale={15} color="#fff" />
+      {/* Menos partículas para o mobile renderizar */}
+      <Sparkles count={100} size={4} speed={0.2} opacity={0.5} scale={15} color="#fff" />
       <LiquidKnot entered={entered} />
     </>
   );
@@ -81,9 +89,15 @@ export default function App() {
   return (
     <div className="relative w-full min-h-screen bg-black text-white selection:bg-red-500 selection:text-white font-sans">
       
-      {/* 1. CAMADA 3D */}
+      {/* 1. CAMADA 3D OTIMIZADA */}
       <div className="fixed inset-0 z-0">
-        <Canvas gl={{ antialias: true, toneMappingExposure: 1.5 }} camera={{ position: [0, 0, 6], fov: 45 }}>
+        <Canvas 
+          // TRAVA A RESOLUÇÃO: Isso salva a bateria e o FPS no celular
+          dpr={[1, 1.5]} 
+          // DESLIGA ANTIALIAS: Telas de celular não precisam tanto, e pesa muito
+          gl={{ antialias: false, powerPreference: "high-performance" }} 
+          camera={{ position: [0, 0, 6], fov: 45 }}
+        >
           <color attach="background" args={["#000000"]} />
           <Scene entered={entered} />
         </Canvas>
@@ -98,9 +112,9 @@ export default function App() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }} 
               animate={{ opacity: 1, y: 0 }}
-              className="text-center pointer-events-auto z-50"
+              className="text-center pointer-events-auto z-50 px-4"
             >
-              <h1 className="text-7xl font-bold tracking-tighter mb-4 text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40">
+              <h1 className="text-6xl md:text-7xl font-bold tracking-tighter mb-4 text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40">
                 UI Z
               </h1>
               <p className="text-zinc-400 mb-8 tracking-widest text-xs uppercase">Seu Site Profissional por Assinatura</p>
@@ -128,7 +142,7 @@ export default function App() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 1 }}
-                className="text-5xl md:text-7xl font-bold tracking-tighter mb-6 leading-tight"
+                className="text-4xl md:text-7xl font-bold tracking-tighter mb-6 leading-tight"
               >
                 A solução completa para <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-600">
@@ -139,7 +153,7 @@ export default function App() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.2 }}
-                className="text-xl md:text-2xl text-zinc-400 max-w-3xl font-light"
+                className="text-lg md:text-2xl text-zinc-400 max-w-3xl font-light"
               >
                 "Sem necessidade de um alto investimento inicial, você pode ter um site moderno, rápido e sempre atualizado."
               </motion.p>
@@ -164,10 +178,10 @@ export default function App() {
             {/* PRICING SECTION */}
             <div className="flex flex-col md:flex-row gap-8 justify-center items-stretch mb-32">
               {/* Card Implantação */}
-              <div className="flex-1 bg-zinc-900/50 backdrop-blur-xl border border-white/10 p-10 rounded-3xl flex flex-col justify-between">
+              <div className="flex-1 bg-zinc-900/50 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-3xl flex flex-col justify-between">
                 <div>
                   <h3 className="text-zinc-400 uppercase tracking-widest text-sm font-bold mb-4">Implantação Inicial</h3>
-                  <div className="text-5xl font-bold mb-2">R$ 100<span className="text-2xl text-zinc-500">,00</span></div>
+                  <div className="text-4xl md:text-5xl font-bold mb-2">R$ 100<span className="text-2xl text-zinc-500">,00</span></div>
                   <p className="text-zinc-500 text-sm mb-8">Pagamento único no primeiro mês</p>
                   <ul className="space-y-4 text-zinc-300">
                     <li className="flex gap-3"><Check className="text-red-500" size={20}/> Configuração completa do site</li>
@@ -178,13 +192,13 @@ export default function App() {
               </div>
 
               {/* Card Assinatura (Destaque) */}
-              <div className="flex-1 relative bg-gradient-to-b from-red-900/20 to-black backdrop-blur-xl border border-red-500/50 p-10 rounded-3xl flex flex-col justify-between shadow-[0_0_50px_rgba(239,68,68,0.2)]">
+              <div className="flex-1 relative bg-gradient-to-b from-red-900/20 to-black backdrop-blur-xl border border-red-500/50 p-8 md:p-10 rounded-3xl flex flex-col justify-between shadow-[0_0_50px_rgba(239,68,68,0.2)]">
                 <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-4 py-1 rounded-bl-xl rounded-tr-2xl uppercase tracking-wider">
                   Recorrente
                 </div>
                 <div>
                   <h3 className="text-red-400 uppercase tracking-widest text-sm font-bold mb-4">Mensalidade</h3>
-                  <div className="text-5xl font-bold mb-2">R$ 49<span className="text-2xl text-zinc-500">,90</span></div>
+                  <div className="text-4xl md:text-5xl font-bold mb-2">R$ 49<span className="text-2xl text-zinc-500">,90</span></div>
                   <p className="text-zinc-500 text-sm mb-8">/mês. Tudo incluído, sem surpresas.</p>
                   <ul className="space-y-4 text-zinc-300">
                     <li className="flex gap-3"><Check className="text-red-500" size={20}/> Site online 24 horas por dia</li>
@@ -221,7 +235,7 @@ export default function App() {
                   <MessageCircle size={20} /> Quero Meu Site Agora
                 </a>
                 
-                {/* LINK SECUNDÁRIO (WHATSAPP TAMBÉM OU OUTRO) */}
+                {/* LINK SECUNDÁRIO */}
                 <a 
                    href={WHATSAPP_LINK}
                    target="_blank" 
